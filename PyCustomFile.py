@@ -1,5 +1,5 @@
 # -------------------------------------------------------------------------------------------------------------------
-#  FileBase : Abstract base type that allows easy creation of custom filetypes
+#  PyCustomFile : Allows easy creation of custom files in Python by handling low level file operations
 # -------------------------------------------------------------------------------------------------------------------
 # 
 # Author: Ashok Fernandez - https://github.com/ashokfernandez/
