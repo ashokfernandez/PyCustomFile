@@ -3,7 +3,7 @@
 # -------------------------------------------------------------------------------------------------------------------
 # 
 # Author: Ashok Fernandez - https://github.com/ashokfernandez/
-# Date  : 14 / 01 / 2014
+# Date  : 18 / 01 / 2014
 # 
 # Description: 
 # Extending FileBase allows the user to create a custom filetype without worrying about low-level file operations
@@ -32,6 +32,9 @@ try:
     import cPickle as pickle
 except ImportError:
     import pickle
+
+# Import GZip to make files smaller
+import gzip
 
 
 # --------------------------------------------------------------------------------------------------------------------
@@ -169,21 +172,22 @@ class FileBase(object):
     def _initWatchdog(self):
         ''' Intialises a watchdog thread to keep an eye on the file on disc to check if it is renamed, moved or
         deleted '''
-
+        # Turned off watchdog after windows errors
+        pass
         # Check we have a filename, extension and directory so we know what to watch
-        if self.name is not None and self.extension is not None and self.directory is not None:
+        # if self.name is not None and self.extension is not None and self.directory is not None:
             
             # Create the watchdog and handler
-            self.watchdog = watchdog.observers.Observer()
-            self.watchdogHandler = FileBaseWatchDog(self)
+            # self.watchdog = watchdog.observers.Observer()
+            # self.watchdogHandler = FileBaseWatchDog(self)
 
             # Schedule the handler
-            self.watchdog.schedule(self.watchdogHandler, path=self.directory, recursive=False)
-            self.watchdog.start()
+            # self.watchdog.schedule(self.watchdogHandler, path=self.directory, recursive=False)
+            # self.watchdog.start()
         
-        else:
+        # else:
             # Figure out what was missing and construct a useful error message
-            self._throwNotEnoughInfo("watchdog")
+            # self._throwNotEnoughInfo("watchdog")
 
     def _updateFileLocation(self, path):
         ''' Updates the path of the file and restarts a new watchdog '''
@@ -240,9 +244,10 @@ class FileBase(object):
         # Get the directory, filename and extension     
         self._getInfoFromPath(path)
 
-        # Unpickle the data and load it to the object pointer
-        with open(path, 'r+b') as f:
+        # Unzip and unpickle the data
+        with gzip.GzipFile(path, 'rb') as f:
             self.data = pickle.load(f)
+            f.close()
 
         # Now setup the watchdog for the file to check if things change on disc that we should know about
         self._initWatchdog()
@@ -251,15 +256,15 @@ class FileBase(object):
         ''' Saves the current file to disc, throws an exception if there isn't enough info internally about
         where to save the file and what name it should have '''
 
+
         # Check we have a filename, extension and directory so we know what to save our file as
-        if self.name is not None and self.extension is not None and self.directory is not None:
-            
+        if self.name is not None and self.extension is not None and self.directory is not None:    
 
             # Check if the file exists, if it doesn't create it
             path = self.getAbsolutePath()
             
-            # Pickle the data and save the file
-            with open(path, 'w+b') as f:
+            # Pickle the data and zip it
+            with gzip.GzipFile(path, 'wb') as f:
                 pickle.dump(self.data, f, pickle.HIGHEST_PROTOCOL)
                 f.close()
         
@@ -269,6 +274,7 @@ class FileBase(object):
         else:
             # Figure out what was missing and construct a useful error message
             self._throwNotEnoughInfo("save")
+
 
     def saveAs(self, path):
         ''' Gets the new filename, extension and path from the given absolute path then saves the file. '''
@@ -294,6 +300,11 @@ class FileBase(object):
     def recoverFromDelete(self, newPath):
         ''' Called to point the file object to a new file when a delete happens to stop things from exploding '''
         self._updateFileLocation(newPath)
+
+    @makesChanges
+    def changeMade(self):
+        ''' Convenince method to tell the file that it should be saved for some reason '''
+        pass
 
 
 # --------------------------------------------------------------------------------------------------------------------
